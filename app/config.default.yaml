@@ -1,0 +1,138 @@
+# Disguise Playback Dashboard config file
+#
+
+designer:
+  # IP address or DNS name of any machine in the running Designer session.
+  # Director IP is the safest choice.
+  host: "127.0.0.1"
+
+  # Designer HTTP API port from d3Manager > Machine Settings > Advanced Network Configuration.
+  # Default is 80; value 0 disables the API.
+  port: 80
+
+  # When true, the bridge asks the configured machine who the Director is and reconnects to it.
+  auto_discover_director: true
+
+  # Normally leave empty.
+  # If the reported Director hostname cannot be resolved from this laptop, put the Director IP here.
+  director_host_override: ""
+  connect_timeout_seconds: 5
+  reconnect_initial_seconds: 1
+  reconnect_max_seconds: 15
+
+server:
+  # 0.0.0.0 = listen on all local interfaces (default), so other devices on the local network can open DPD.
+  # Use 127.0.0.1 for access only from this computer.
+  bind: "0.0.0.0"
+  port: 8080
+
+timelines:
+  main:
+    # Transport Manager name that drives the main timeline.
+    # Use default for the built-in transport.
+    transport: "default"
+
+    # Advanced fallback: an exact Designer Python resource expression. Leave empty in normal use.
+    transport_expression: ""
+    max_active_layers: 3
+
+    # Optional exact layer names, highest priority first. Listed layers become the top rows/countdown source.
+    layer_priority: []
+
+  aux:
+    # Transport Manager name for the second timeline.
+    # The approved compact design shows one active row.
+    transport: "second"
+    transport_expression: ""
+    max_active_layers: 1
+    layer_priority: []
+
+updates:
+  # Milliseconds for Live Update subscriptions.
+  # 100 ms is responsive without making the browser talk to Designer directly.
+  transport_ms: 100
+  active_layers_ms: 100
+  video_details_ms: 500
+  video_timing_ms: 250
+
+  # layers_ms controls the read-only catalogue of all graphical leaves of each selected track.
+  # Next compares future layer and media entry beats chronologically; this catalogue never creates Active rows.
+  layers_ms: 1000
+  sections_ms: 1000
+  schedule_ms: 1000
+  annotations_seconds: 10
+  brightness_ms: 100
+
+  # LocalState.directorState().output is subscribed independently from transport and media timing.
+  outputs_ms: 100
+
+  # Actual FPS on the connected Director via MonitoringManager.
+  # fps_average_samples=60 requests Designer's average of its latest 60 measurements, not 60 browser polls.
+  # Raw Actual/1 is logged and shown only in diagnostics. fps_ms=1000 controls subscription frequency. No cap at 60 FPS.
+  fps_ms: 1000
+  fps_average_samples: 60
+
+  # Optional independent stream for Simple Next Duration. Reads VideoClip.transportDuration as Designer timecode,
+  # matched to the scheduled clip by resource UID. Unknown durations stay blank; section length is never used instead.
+  media_metadata_ms: 1000
+
+  # Independent read-only VideoClip.hasAudio metadata for Active/Previous/Next.
+  # The icon reports an embedded track, not audible output or file volume.
+  media_audio_ms: 1000
+
+  # Reads the saved brightness sequence at the mapped media entry beat, before activation.
+  # Expression/Sockpuppet/external control stays unknown. Active brightness still uses the existing runtime subscription.
+  preview_brightness_ms: 1000
+
+logic:
+  # Compatibility threshold used only when an adapter supplies brightness
+  # this build uses TrackPlayer.activeLayers for current graphical layers.
+  minimum_brightness: 0.001
+  stale_after_seconds: 3
+  annotation_time_tolerance: 0.01
+
+  # Default shows only SECTION NN. Optional sources: note, cue, index, number.
+  # Add them in the desired priority only if you intentionally want annotation text.
+  section_label_priority:
+    - "number"
+
+  # Read TC, MIDI, CUE (shown as OSC), and notes at Current/Next Section breaks.
+  # Refresh runs independently from the timing WebSocket.
+  section_metadata_enabled: true
+
+ui:
+  # Normally leave empty: the dashboard reads the project name from /api/session/status/project.
+  # Set text here only to override it.
+  project_name: ""
+  browser_poll_ms: 100
+  blink_at_seconds: 10
+
+  # Normally leave these values unchanged. Identical API samples no longer restart the timer;
+  # small higher samples are rejected as jitter, while a large difference or transport seek resynchronises immediately.
+  countdown_sample_epsilon_seconds: 0.005
+  countdown_hard_resync_seconds: 1.5
+  countdown_seek_threshold_seconds: 0.75
+
+  # A remaining duration at or above this value is treated as an open-ended/live source.
+  live_threshold_seconds: 86400
+  default_fps: 25
+  date_locale: "ru-RU"
+  browser_request_timeout_ms: 2000
+
+  # Approved placement: media-suffix (speaker at the right edge inside Media, filename ellipsis before it).
+  # Other options: media-prefix, layer-meta, media-label, off.
+  # Applies to all rows on both pages; only hasAudio=true shows the icon.
+  audio_indicator_position: "media-suffix"
+
+  # Entry AND exit of every displayed ACTIVE layer: off, fade, lift, accent, transfer.
+  # D has both previews and engine/counter diagnostics. Preference is shared by both views in this browser.
+  # Reduce motion disables effects unless explicitly allowed in D. No playback control.
+  next_active_animation: "lift"
+
+logging:
+  level: "INFO"
+  max_bytes: 5000000
+  backup_count: 3
+
+  # At DEBUG level, write derived Previous/Active/Next and timers this often. Set 0 to disable.
+  debug_snapshot_seconds: 10

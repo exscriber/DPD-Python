@@ -10,9 +10,9 @@ import re
 import threading
 import time
 
-from app import APP_VERSION
+from app import APP_VERSION, cfg
 
-from .cfg import LOG_PATH, MAX_FLOAT_SENTINEL
+from .cfg import LOG_FILE, MAX_FLOAT_SENTINEL
 from .logger import LOGGER
 from .props import (
     DIRECTOR_FPS_OBJECT,
@@ -438,7 +438,7 @@ class DashboardStore:
         except (ValueError, TypeError):
             return result
         at_time = as_float(api_sections[ordinal]["time"])
-        tolerance = max(0.0, float(self.config.get("logic", {}).get("annotation_time_tolerance", 0.01)))
+        tolerance = max(0.0, cfg.value("logic.annotation_time_tolerance", 0.01))
         grouped = {"tc": [], "midi": [], "osc": [], "notes": []}
 
 
@@ -477,7 +477,7 @@ class DashboardStore:
         note = ""
         cue = ""
         if section_time is not None:
-            tolerance = float(self.config.get("logic", {}).get("annotation_time_tolerance", 0.01))
+            tolerance = cfg.value("logic.annotation_time_tolerance", 0.01)
             for item in notes_api:
                 item_time = as_float(item.get("time"))
                 if item_time is not None and abs(item_time - section_time) <= tolerance:
@@ -1111,12 +1111,12 @@ class DashboardStore:
         basic_active = unique_active
 
         min_brightness = float(
-            self.config.get("logic", {}).get("minimum_brightness", 0.001)
+            cfg.value("logic.minimum_brightness", 0.001)
         )
         live_threshold = float(
-            self.config.get("ui", {}).get("live_threshold_seconds", 86_400)
+            cfg.value("ui.live_threshold_seconds", 86_400)
         )
-        default_fps = as_float(self.config.get("ui", {}).get("default_fps"), 25.0)
+        default_fps = as_float(cfg.value("ui.default_fps", 25.0))
         rows = []
 
         for base in basic_active:
@@ -1476,7 +1476,7 @@ class DashboardStore:
     def snapshot(self) -> dict:
         with self.lock:
             now = time.monotonic()
-            stale_after = float(self.config.get("logic", {}).get("stale_after_seconds", 3.0))
+            stale_after = cfg.value("logic.stale_after_seconds", 3.0)
             stale = not self.last_update_monotonic or (now - self.last_update_monotonic) > stale_after
             connected = bool(self.connected and not stale)
             output_available = connected and self.output_code in OUTPUT_STATES and "output_state" not in self.stream_errors
@@ -1518,7 +1518,7 @@ class DashboardStore:
                     "lastUpdate": self.last_update_wall,
                     "lastError": self.last_error,
                     "lastErrorAt": self.last_error_wall,
-                    "logFile": str(LOG_PATH),
+                    "logFile": str(LOG_FILE),
                     "scheduleItems": len(self.media_schedule),
                     "streams": copy.deepcopy(self.stream_status),
                     "streamErrors": copy.deepcopy(self.stream_errors),
@@ -1531,7 +1531,7 @@ class DashboardStore:
     def log_snapshot_summary(self, snapshot: dict):
 
         interval = float(
-            self.config.get("logging", {}).get("state_snapshot_seconds", 10.0)
+            cfg.value("logging.debug_snapshot_seconds", 10.0)
         )
         now = time.monotonic()
         with self.lock:
@@ -1542,7 +1542,7 @@ class DashboardStore:
             self.fps_raw_stats = {"count": 0, "min": None, "max": None}
 
         perf = snapshot.get("performance") or {}
-        LOGGER.info("Performance: director=%s fps_average=%s average_samples=%s "
+        LOGGER.debug("Performance: director=%s fps_average=%s average_samples=%s "
                     "fps_raw=%s raw_samples=%s raw_min=%s raw_max=%s source=%s",
                     (snapshot.get("status") or {}).get("directorHost"),
                     perf.get("fps"), perf.get("averageSamples"), perf.get("rawFps"),
@@ -1563,7 +1563,7 @@ class DashboardStore:
                 }
                 for item in data.get("active", [])
             ]
-            LOGGER.info(
+            LOGGER.debug(
                 "Derived %s: transport=%s track=%s beat=%s section=%s "
                 "trackMedia=%s previous=%s active=%s next=%s countdown=%s currentSection=%s",
                 role,

@@ -6,10 +6,12 @@ import math
 import re
 from pathlib import Path
 
+from app import cfg
+
 
 def fps_average_samples(config: dict) -> int:
     try:
-        return max(1, min(300, int(config.get("updates", {}).get("fps_average_samples", 60))))
+        return max(1, min(300, cfg.value("updates.fps_average_samples", 60)))
     except TypeError, ValueError:
         return 60
 

@@ -8,7 +8,7 @@ authors = [
     { name = "Vladimir Zakharov" },
 ]
 requires-python = ">=3.14"
-dependencies = [ "websockets" ]
+dependencies = [ "websockets", "pyyaml" ]
 
 [project.scripts]
 server = "app.server:main"

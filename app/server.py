@@ -15,8 +15,7 @@ import webbrowser
 from pathlib import Path
 from urllib.request import ProxyHandler, build_opener
 
-from app import APP_VERSION
-from app.cfg import DEFAULT_CONFIG_PATH, LOG_PATH
+from app import APP_VERSION, cfg
 from app.logger import LOGGER, setup_logging
 
 from .DashboardHTTPServer import DashboardHTTPServer
@@ -26,27 +25,16 @@ from .DemoClient import DemoClient
 from .DisguiseLiveClient import DisguiseLiveClient
 
 
-def load_config(path: Path) -> dict:
-    with path.open("r", encoding="utf-8-sig") as handle:
-        data = json.load(handle)
-    if "designer" not in data or "timelines" not in data:
-        raise ValueError("config.json must contain 'designer' and 'timelines'")
-    for role in ("main", "aux"):
-        if role not in data["timelines"]:
-            raise ValueError("config.json is missing timelines.%s" % role)
-    return data
-
-
 def local_url(config: dict) -> str:
-    host = str(config.get("server", {}).get("bind", "0.0.0.0"))
+    host = cfg.value('server.bind', '0.0.0.0')
+    port = cfg.value('server.port', 8080)
     display_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
-    port = int(config.get("server", {}).get("port", 8080))
-    return "http://%s:%d/" % (display_host, port)
+    return f"http://{display_host}:{port}/"
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Disguise playback dashboard")
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Path to config.json")
+    parser.add_argument("--config", default=str(cfg.CONFIG_FILE), help="Path to config.yaml")
     parser.add_argument("--demo", action="store_true", help="Run with generated data and no Designer connection")
     parser.add_argument("--open", action="store_true", help="Open the dashboard in the default browser")
     return parser.parse_args()
@@ -141,27 +129,25 @@ def main(browser_opener=None) -> int:
     args = parse_arguments()
     config_path = Path(args.config).resolve()
     try:
-        config = load_config(config_path)
-    except Exception as exc:
-        print("Cannot load %s: %s" % (config_path, exc), file=sys.stderr)
-        return 2
+        config_data = cfg.load(config_path)
+    except Exception as e:
+        print(f"Cannot load {config_path}: {e}", file=sys.stderr)
+        return os.EX_CONFIG
 
-    setup_logging(config)
+    setup_logging(config_data)
     LOGGER.info("Starting Disguise Playback Dashboard %s", APP_VERSION)
     LOGGER.info("Configuration: %s", config_path)
     stop_event = threading.Event()
-    store = DashboardStore(config)
-    client = DemoClient(config, store, stop_event) if args.demo else DisguiseLiveClient(config, store, stop_event)
+    store = DashboardStore(config_data)
+    client = DemoClient(config_data, store, stop_event) if args.demo else DisguiseLiveClient(config_data, store, stop_event)
 
-    bind = str(config.get("server", {}).get("bind", "0.0.0.0"))
-    port = int(config.get("server", {}).get("port", 8080))
+    bind = cfg.value('server.bind', '0.0.0.0')
+    port = cfg.value('server.port', 8080)
     try:
-        if sys.platform == "win32":
-            replace_windows_instance(bind, port)
         bind_deadline = time.monotonic() + 10
         while True:
             try:
-                httpd = DashboardHTTPServer((bind, port), DashboardRequestHandler, store, config)
+                httpd = DashboardHTTPServer((bind, port), DashboardRequestHandler, store, config_data)
                 break
             except OSError as exc:
 
@@ -176,9 +162,9 @@ def main(browser_opener=None) -> int:
         return 3
 
     client.start()
-    url = local_url(config)
+    url = local_url(config_data)
     LOGGER.info("Dashboard: %s", url)
-    LOGGER.info("Log file: %s", LOG_PATH)
+    LOGGER.info("Log file: %s", cfg.LOG_FILE)
     print("\nDashboard: %s" % url)
     print("Press Ctrl+C to stop.\n")
 

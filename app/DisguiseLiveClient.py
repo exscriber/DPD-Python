@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect as websocket_connect
 
-from app import APP_VERSION
+from app import APP_VERSION, cfg
 
 from .DashboardStore import DashboardStore
 from .logger import LOGGER
@@ -69,14 +69,14 @@ class DisguiseLiveClient(threading.Thread):
                 "key": "output_state",
                 "object": "domain:MappedMedia",
                 "property": OUTPUT_STATE_PROPERTY,
-                "frequency": int(self.config.get("updates", {}).get("outputs_ms", 100)),
+                "frequency": cfg.value("updates.outputs_ms", 100),
             },
             {
                 "key": "media_schedule",
                 "object": "domain:MappedMedia",
                 "property": MEDIA_SCHEDULE_PROPERTY,
-                "frequency": int(self.config.get("updates", {}).get("schedule_ms", 1000)),
-            }
+                "frequency": cfg.value("updates.schedule_ms", 1000),
+            },
         ]
         for role in ("main", "aux"):
             obj = transport_expression(self.config["timelines"][role])
@@ -86,73 +86,73 @@ class DisguiseLiveClient(threading.Thread):
                         "key": f"{role}.transport",
                         "object": obj,
                         "property": TRANSPORT_STATE_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("transport_ms", 100)),
+                        "frequency": cfg.value("updates.transport_ms", 100),
                     },
                     {
                         "key": f"{role}.sections",
                         "object": obj,
                         "property": SECTIONS_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("sections_ms", 1000)),
+                        "frequency": cfg.value("updates.sections_ms", 1000),
                     },
                     {
                         "key": f"{role}.active_content",
                         "object": obj,
                         "property": ACTIVE_GRAPHICAL_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("active_layers_ms", 100)),
+                        "frequency": cfg.value("updates.active_layers_ms", 100),
                     },
                     {
                         "key": f"{role}.active_brightness",
                         "object": obj,
                         "property": ACTIVE_BRIGHTNESS_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("brightness_ms", 100)),
+                        "frequency": cfg.value("updates.brightness_ms", 100),
                     },
                     {
                         "key": f"{role}.active_standard_video_details",
                         "object": obj,
                         "property": ACTIVE_STANDARD_VIDEO_DETAILS_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_details_ms", 500)),
+                        "frequency": cfg.value("updates.video_details_ms", 500),
                     },
                     {
                         "key": f"{role}.active_standard_video_frames",
                         "object": obj,
                         "property": ACTIVE_STANDARD_VIDEO_FRAMES_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                     {
                         "key": f"{role}.active_standard_video_elapsed",
                         "object": obj,
                         "property": ACTIVE_STANDARD_VIDEO_ELAPSED_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                     {
                         "key": f"{role}.active_standard_video_remaining",
                         "object": obj,
                         "property": ACTIVE_STANDARD_VIDEO_REMAINING_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                     {
                         "key": f"{role}.active_variable_video_details",
                         "object": obj,
                         "property": ACTIVE_VARIABLE_VIDEO_DETAILS_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_details_ms", 500)),
+                        "frequency": cfg.value("updates.video_details_ms", 500),
                     },
                     {
                         "key": f"{role}.active_variable_video_frames",
                         "object": obj,
                         "property": ACTIVE_VARIABLE_VIDEO_FRAMES_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                     {
                         "key": f"{role}.active_variable_video_elapsed",
                         "object": obj,
                         "property": ACTIVE_VARIABLE_VIDEO_ELAPSED_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                     {
                         "key": f"{role}.active_variable_video_remaining",
                         "object": obj,
                         "property": ACTIVE_VARIABLE_VIDEO_REMAINING_PROPERTY,
-                        "frequency": int(self.config.get("updates", {}).get("video_timing_ms", 250)),
+                        "frequency": cfg.value("updates.video_timing_ms", 250),
                     },
                 ]
             )
@@ -161,25 +161,25 @@ class DisguiseLiveClient(threading.Thread):
         self.subscription_specs.append({
             "key": "director_fps", "object": DIRECTOR_FPS_OBJECT,
             "property": director_fps_property(self.config),
-            "frequency": int(self.config.get("updates", {}).get("fps_ms", 1000)),
+            "frequency": cfg.value("updates.fps_ms", 1000),
         })
         self.subscription_specs.extend([
             {"key": "director_fps_raw", "object": DIRECTOR_FPS_OBJECT,
              "property": DIRECTOR_FPS_RAW_PROPERTY,
-             "frequency": int(self.config.get("updates", {}).get("fps_ms", 1000))},
+             "frequency": cfg.value("updates.fps_ms", 1000)},
             {"key": "media_metadata", "object": "domain:MappedMedia",
              "property": MEDIA_METADATA_PROPERTY,
-             "frequency": int(self.config.get("updates", {}).get("media_metadata_ms", 1000))},
+             "frequency": cfg.value("updates.media_metadata_ms", 1000)},
             {"key": "media_audio", "object": "domain:MappedMedia",
              "property": MEDIA_AUDIO_PROPERTY,
-             "frequency": int(self.config.get("updates", {}).get("media_audio_ms", 1000))},
+             "frequency": cfg.value("updates.media_audio_ms", 1000)},
             {"key": "media_versions", "object": "domain:MappedMedia",
              "property": MEDIA_VERSIONS_PROPERTY, "frequency": 1000},
             {"key": "media_files", "object": "domain:MappedMedia",
              "property": MEDIA_FILES_PROPERTY, "frequency": 1000},
             {"key": "preview_brightness", "object": "domain:MappedMedia",
              "property": PREVIEW_BRIGHTNESS_PROPERTY,
-             "frequency": int(self.config.get("updates", {}).get("preview_brightness_ms", 1000))},
+             "frequency": cfg.value("updates.preview_brightness_ms", 1000)},
         ])
 
         for role in ("main", "aux"):
@@ -187,10 +187,10 @@ class DisguiseLiveClient(threading.Thread):
             self.subscription_specs.extend([
                 {"key": role + ".graphical_schedule", "object": obj,
                  "property": GRAPHICAL_SCHEDULE_PROPERTY,
-                 "frequency": int(self.config.get("updates", {}).get("layers_ms", 1000))},
+                 "frequency": cfg.value("updates.layers_ms", 1000)},
                 {"key": role + ".graphical_preview_brightness", "object": obj,
                  "property": GRAPHICAL_PREVIEW_BRIGHTNESS_PROPERTY,
-                 "frequency": int(self.config.get("updates", {}).get("preview_brightness_ms", 1000))},
+                 "frequency": cfg.value("updates.preview_brightness_ms", 1000)},
             ])
 
     def _http_json(self, host: str, endpoint: str, timeout: float = 4.0):
@@ -294,7 +294,7 @@ class DisguiseLiveClient(threading.Thread):
             websocket.send(json.dumps(message, separators=(",", ":")))
 
             deadline = time.monotonic() + float(
-                self.config.get("designer", {}).get("subscribe_timeout_seconds", 2.0)
+                cfg.value("designer.subscribe_timeout_seconds", 2.0)
             )
             while time.monotonic() < deadline:
                 try:
@@ -386,11 +386,9 @@ class DisguiseLiveClient(threading.Thread):
     def _refresh_annotations_if_needed(self, force=False):
         label_sources = {
             str(value).lower()
-            for value in self.config.get("logic", {}).get(
-                "section_label_priority", ["number"]
-            )
+            for value in self.config.get("logic", {}).get("section_label_priority", ["number"])
         }
-        cards_enabled = self.config.get("logic", {}).get("section_metadata_enabled", True)
+        cards_enabled = cfg.value("logic.section_metadata_enabled", True)
         if not cards_enabled and not label_sources.intersection({"note", "cue", "index"}):
             return
         if not self.director_host or not self.store.connected or self.stop_event.is_set():
@@ -399,7 +397,7 @@ class DisguiseLiveClient(threading.Thread):
             return
         identities = self.store.track_identities()
         now = time.monotonic()
-        interval = max(1.0, float(self.config.get("updates", {}).get("annotations_seconds", 10.0)))
+        interval = max(1.0, cfg.value("updates.annotations_seconds", 10.0))
         due = any(
             identity["name"] and identity["name"] != "NOT CONNECTED"
             and (force or identity != self.last_annotations_track[role]
@@ -424,7 +422,7 @@ class DisguiseLiveClient(threading.Thread):
         identities = self.store.track_identities()
         host = self.director_host
         now = time.monotonic()
-        interval = max(1.0, float(self.config.get("updates", {}).get("annotations_seconds", 10.0)))
+        interval = max(1.0, cfg.value("updates.annotations_seconds", 10.0))
         for role in ("main", "aux"):
             identity = identities[role]
             track_name = identity["name"]
@@ -475,8 +473,8 @@ class DisguiseLiveClient(threading.Thread):
             self.store.set_connection(False, "dependency-error", error=message)
             return
 
-        initial_delay = float(self.config.get("designer", {}).get("reconnect_initial_seconds", 1.0))
-        max_delay = float(self.config.get("designer", {}).get("reconnect_max_seconds", 15.0))
+        initial_delay = cfg.value("designer.reconnect_initial_seconds", 1.0)
+        max_delay = cfg.value("designer.reconnect_max_seconds", 15.0)
         delay = initial_delay
         while not self.stop_event.is_set():
             self.store.connection_attempt += 1
