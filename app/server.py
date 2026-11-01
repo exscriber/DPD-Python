@@ -3112,5 +3112,13 @@ def main(browser_opener=None) -> int:
     return 4 if browser_failed.is_set() else 0
 
 
+def demo_main():
+    if "--demo" not in sys.argv:
+        sys.argv.append("--demo")
+    if "--open" not in sys.argv:
+        sys.argv.append("--open")
+    return main()
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,0 +1,35 @@
+[project]
+name = "disguise-playback-dashboard"
+version = "0.4.14"
+description = "Disguise Playback Dashboard"
+readme = "README.md"
+license = "GPL-3.0-only"
+authors = [
+    { name = "Vladimir Zakharov" },
+]
+requires-python = ">=3.14"
+dependencies = [ "websockets" ]
+
+[project.scripts]
+server = "app.server:main"
+demo   = "app.server:demo_main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""
+
+[tool.black]
+line-length = 100
+preview = true
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+preview = true
+quote-style = "preserve"
