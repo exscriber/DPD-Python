@@ -29,6 +29,8 @@ from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen, build_opener, ProxyHandler
 import webbrowser
 
+from app import APP_VERSION
+
 try:
     from websockets.sync.client import connect as websocket_connect
     from websockets.exceptions import ConnectionClosed
@@ -47,8 +49,6 @@ LEGACY_CONFIG_PATH = APP_DIR / "config.json"
 LOG_DIR = LOCAL_DIR / "logs"
 LOG_PATH = LOG_DIR / "dashboard.log"
 LOGGER = logging.getLogger("disguise-dashboard")
-APP_VERSION = "0.4.13"
-
 MAX_FLOAT_SENTINEL = 1.0e300
 
 
