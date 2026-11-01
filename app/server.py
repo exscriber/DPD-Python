@@ -10,8 +10,6 @@ import argparse
 import copy
 import errno
 import json
-import logging
-from logging.handlers import RotatingFileHandler
 import math
 import ipaddress
 import os
@@ -30,7 +28,9 @@ from urllib.request import Request, urlopen, build_opener, ProxyHandler
 import webbrowser
 
 from app import APP_VERSION
+
 from .cfg import *
+from .logger import LOGGER, open_log_folder, read_log_tail, setup_logging
 
 try:
     from websockets.sync.client import connect as websocket_connect
@@ -40,9 +40,6 @@ except ImportError:
 
     class ConnectionClosed(Exception):
         pass
-
-
-LOGGER = logging.getLogger("disguise-dashboard")
 
 
 OUTPUT_STATE_PROPERTY = "LocalState.directorState().output"
@@ -357,33 +354,6 @@ def load_config(path: Path) -> dict:
         if role not in data["timelines"]:
             raise ValueError("config.json is missing timelines.%s" % role)
     return data
-
-
-def setup_logging(config: dict) -> None:
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    level_name = str(config.get("logging", {}).get("level", "INFO")).upper()
-    level = getattr(logging, level_name, logging.INFO)
-    LOGGER.setLevel(level)
-    LOGGER.handlers.clear()
-
-    formatter = logging.Formatter(
-        "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    file_handler = RotatingFileHandler(
-        LOG_PATH,
-        maxBytes=int(config.get("logging", {}).get("max_bytes", 5_000_000)),
-        backupCount=int(config.get("logging", {}).get("backup_count", 3)),
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    LOGGER.addHandler(file_handler)
-
-    console = logging.StreamHandler(sys.stdout)
-    console.setFormatter(formatter)
-    console.setLevel(level)
-    LOGGER.addHandler(console)
 
 
 def as_float(value, default=None):
@@ -2770,24 +2740,6 @@ class DemoClient(threading.Thread):
                     }
                 ],
             )
-
-
-def open_log_folder():
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    if sys.platform == "win32":
-        os.startfile(str(LOG_DIR))
-    else:
-        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(LOG_DIR)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-
-def read_log_tail(lines: int = 200) -> str:
-    try:
-        with LOG_PATH.open("r", encoding="utf-8", errors="replace") as handle:
-            content = handle.readlines()
-        return "".join(content[-max(1, min(lines, 2000)):])
-    except FileNotFoundError:
-        return "Log file has not been created yet."
 
 
 class DashboardHTTPServer(ThreadingHTTPServer):
