@@ -30,6 +30,7 @@ from urllib.request import Request, urlopen, build_opener, ProxyHandler
 import webbrowser
 
 from app import APP_VERSION
+from .cfg import *
 
 try:
     from websockets.sync.client import connect as websocket_connect
@@ -41,18 +42,7 @@ except ImportError:
         pass
 
 
-APP_DIR = Path(__file__).resolve().parents[1]
-WEB_DIR = Path(__file__).resolve().parent / "web"
-LOCAL_DIR = APP_DIR / ".private"
-DEFAULT_CONFIG_PATH = LOCAL_DIR / "config.json"
-LEGACY_CONFIG_PATH = APP_DIR / "config.json"
-LOG_DIR = LOCAL_DIR / "logs"
-LOG_PATH = LOG_DIR / "dashboard.log"
 LOGGER = logging.getLogger("disguise-dashboard")
-MAX_FLOAT_SENTINEL = 1.0e300
-
-
-
 
 
 OUTPUT_STATE_PROPERTY = "LocalState.directorState().output"
@@ -2945,8 +2935,7 @@ def local_url(config: dict) -> str:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Disguise playback dashboard")
-    default_config = LEGACY_CONFIG_PATH if LEGACY_CONFIG_PATH.is_file() else DEFAULT_CONFIG_PATH
-    parser.add_argument("--config", default=str(default_config), help="Path to config.json")
+    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Path to config.json")
     parser.add_argument("--demo", action="store_true", help="Run with generated data and no Designer connection")
     parser.add_argument("--open", action="store_true", help="Open the dashboard in the default browser")
     return parser.parse_args()
