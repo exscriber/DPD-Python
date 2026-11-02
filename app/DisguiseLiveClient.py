@@ -433,7 +433,7 @@ class DisguiseLiveClient(threading.Thread):
             if not force and not changed and not expired:
                 continue
             locator = "uid=%s" % quote(identity["uid"], safe="") if identity["uid"] else "name=%s" % quote(track_name, safe="")
-            endpoint = "/api/session/transport/annotations?%s" % locator
+            endpoint = f"/api/session/transport/annotations?{locator}"
 
             self.last_annotations_track[role] = identity
             self.last_annotations_refresh[role] = now
@@ -458,7 +458,7 @@ class DisguiseLiveClient(threading.Thread):
             self.store.set_error(contextual)
             if subscription_context:
                 self.store.set_stream_error(subscription_context, message)
-            LOGGER.error("Designer Live Update error %s: %s", " for %s" % subscription_context if subscription_context else "", message)
+            LOGGER.error("Designer Live Update error %s: %s", f" for {subscription_context}" if subscription_context else "", message)
         if isinstance(data.get("subscriptions"), list):
             self._handle_subscriptions(data["subscriptions"])
         if isinstance(data.get("valuesChanged"), list):

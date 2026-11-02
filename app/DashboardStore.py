@@ -184,7 +184,7 @@ class DashboardStore:
                          and value in OUTPUT_STATES)
                 if not valid:
                     self.output_code = None
-                    self.set_stream_error(key, "Unknown LocalState.output value: %r" % value)
+                    self.set_stream_error(key, f"Unknown LocalState.output value: {value!r}")
                     return
                 code = int(value)
                 if code != self.output_code:
@@ -198,7 +198,7 @@ class DashboardStore:
                         self.director_fps = None
                     else:
                         self.director_fps_raw = None
-                    self.set_stream_error(key, "Invalid Director FPS value: %r" % value)
+                    self.set_stream_error(key, f"Invalid Director FPS value: {value!r}")
                     return
                 if key == "director_fps":
                     self.director_fps = float(value)
@@ -257,8 +257,8 @@ class DashboardStore:
 
                     if switched:
                         self.roles[role]["annotations"] = {}
-                        self.stream_status.pop("%s.annotations" % role, None)
-                        self.stream_errors.pop("%s.annotations" % role, None)
+                        self.stream_status.pop(f"{role}.annotations", None)
+                        self.stream_errors.pop(f"{role}.annotations", None)
                         self.roles[role]["active_brightness"] = []
                         self.roles[role]["graphical_schedule"] = {}
                         self.roles[role]["graphical_preview_brightness"] = {}
@@ -353,7 +353,7 @@ class DashboardStore:
             self.roles[role]["annotations"] = data if isinstance(data, dict) else {}
             values = self.roles[role]["annotations"]
             values = values.get("annotations") or values
-            key = "%s.annotations" % role
+            key = f"{role}.annotations"
             self.stream_errors.pop(key, None)
             self.stream_status[key] = {
                 "lastUpdate": time.time(), "kind": "annotations",
@@ -413,7 +413,7 @@ class DashboardStore:
                   "metadataMatch": None}
         if not section:
             return result
-        if "%s.annotations" % role in self.stream_errors:
+        if f"{role}.annotations" in self.stream_errors:
             result["metadataMatch"] = "api-error"
             return result
         annotations = role_data.get("annotations") or {}
@@ -496,8 +496,8 @@ class DashboardStore:
         values = {
             "note": note,
             "cue": cue,
-            "index": ("SECTION %s" % api_index) if api_index else "",
-            "number": "SECTION %02d" % (index + 1),
+            "index": (f"SECTION {api_index}") if api_index else "",
+            "number": f"SECTION {index + 1:02d}",
         }
         priority = self.config.get("logic", {}).get(
             "section_label_priority", ["number"]
@@ -506,7 +506,7 @@ class DashboardStore:
             value = values.get(str(source), "")
             if value:
                 return value
-        return "SECTION %02d" % (index + 1)
+        return f"SECTION {index + 1:02d}"
 
     @staticmethod
     def _play_mode(transport: dict) -> str:
@@ -1138,7 +1138,7 @@ class DashboardStore:
             if self._layer_hidden(row):
                 continue
 
-            brightness_key = "%s.active_brightness" % role
+            brightness_key = f"{role}.active_brightness"
             samples = role_data.get("active_brightness") or []
             brightness_sample = next(
                 (sample for sample in samples if isinstance(sample, dict)

@@ -4,16 +4,13 @@
 
 import argparse
 import errno
-import json
 import os
-import socket
 import subprocess
 import sys
 import threading
 import time
 import webbrowser
 from pathlib import Path
-from urllib.request import ProxyHandler, build_opener
 
 from app import APP_VERSION, cfg
 from app.logger import LOGGER, setup_logging
@@ -40,92 +37,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def windows_listeners(port: int) -> list:
-    script = (
-        '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; '
-        '$items=@(Get-NetTCPConnection -State Listen -LocalPort ' + str(int(port)) +
-        ' -ErrorAction SilentlyContinue | ForEach-Object { '
-        '$entry=$_; $proc=Get-CimInstance Win32_Process '
-        "-Filter ('ProcessId=' + $entry.OwningProcess) -ErrorAction Stop; "
-        '[pscustomobject]@{OwningProcess=$entry.OwningProcess; '
-        'LocalAddress=$entry.LocalAddress; Name=$proc.Name; CommandLine=$proc.CommandLine} }); '
-        'ConvertTo-Json -InputObject $items -Compress'
-    )
-    result = subprocess.run(['powershell.exe', '-NoLogo', '-NoProfile', '-NonInteractive',
-                             '-Command', script], check=True, capture_output=True,
-                            text=True, encoding='utf-8-sig', timeout=15)
-    data = json.loads(result.stdout or '[]')
-    if isinstance(data, dict):
-        data = [data]
-    return [{'pid': int(item['OwningProcess']), 'address': item['LocalAddress'],
-             'name': item.get('Name') or 'unknown process',
-             'commandLine': item.get('CommandLine') or ''} for item in data]
-
-
-def stop_windows_process(pid: int):
-    if pid <= 0 or pid == os.getpid():
-        raise OSError('Cannot stop an invalid or current process')
-    subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], check=True,
-                   capture_output=True, text=True, timeout=10)
-
-
-def replace_windows_instance(bind: str, port: int):
-    host = '127.0.0.1' if bind in ('0.0.0.0', '::') else bind
-    address = socket.gethostbyname(host)
-
-    with socket.socket() as local_check:
-        try:
-            local_check.bind((address, 0))
-        except OSError as exc:
-            raise OSError('server.bind must be an address of this computer (or 0.0.0.0); '
-                          'put the Director address in designer.host.') from exc
-    with socket.socket() as probe:
-        probe.settimeout(.5)
-        if probe.connect_ex((address, port)) != 0:
-            return
-    stopped = set()
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        with socket.socket() as probe:
-            probe.settimeout(.2)
-            if probe.connect_ex((address, port)) != 0:
-                return len(stopped)
-        owners = windows_listeners(port)
-        owners = [owner for owner in owners
-                  if owner['address'] in (address, '0.0.0.0', '::', '::ffff:' + address)]
-        by_pid = {owner['pid']: owner for owner in owners}
-        if len(by_pid) != 1:
-            raise OSError(f'Cannot identify one local owner of {host}:{port}; no process was stopped.')
-        owner = next(iter(by_pid.values()))
-        if owner['pid'] in stopped:
-            time.sleep(.2)
-            continue
-        identified = False
-        try:
-
-            endpoint = f'http://{address}:{port}/api/state'
-            with build_opener(ProxyHandler({})).open(endpoint, timeout=2) as response:
-                data = json.loads(response.read(1024 * 1024))
-                identified = (response.geturl() == endpoint
-                              and response.headers.get('Server', '').startswith('DisguisePlaybackDashboard/')
-                              and isinstance(data, dict) and isinstance(data.get('appVersion'), str)
-                              and isinstance(data.get('main'), dict) and isinstance(data.get('aux'), dict))
-        except (OSError, ValueError):
-            pass
-        if not identified:
-            raise OSError(f"Port {port} is used by {owner['name']} (PID {owner['pid']}), "
-                          'not a verified DPD instance. It was left running. '
-                          'Choose an unused server.port in config.json.')
-        LOGGER.info('Replacing previous DPD: PID %s on %s:%s', owner['pid'], host, port)
-        stop_windows_process(owner['pid'])
-        stopped.add(owner['pid'])
-        if len(stopped) >= 8:
-            raise OSError(f'Too many DPD restarts on port {port}; check for an external auto-restart service.')
-        time.sleep(.1)
-    raise OSError(f'Previous DPD did not release port {port}; new instance was not started.')
-
-
-def main(browser_opener=None) -> int:
+def main() -> int:
     args = parse_arguments()
     config_path = Path(args.config).resolve()
     try:
@@ -149,15 +61,14 @@ def main(browser_opener=None) -> int:
             try:
                 httpd = DashboardHTTPServer((bind, port), DashboardRequestHandler, store, config_data)
                 break
-            except OSError as exc:
-
+            except OSError as e:
                 if (sys.platform != "win32" or time.monotonic() >= bind_deadline
-                        or (exc.errno not in (errno.EADDRINUSE, errno.EACCES)
-                            and getattr(exc, "winerror", None) not in (10048, 10013))):
+                        or (e.errno not in (errno.EADDRINUSE, errno.EACCES)
+                            and getattr(e, "winerror", None) not in (10048, 10013))):
                     raise
                 time.sleep(.2)
-    except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        LOGGER.error("Cannot start local web server on %s:%d: %s", bind, port, exc)
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        LOGGER.error("Cannot start local web server on %s:%d: %s", bind, port, e)
         stop_event.set()
         return 3
 
@@ -165,17 +76,17 @@ def main(browser_opener=None) -> int:
     url = local_url(config_data)
     LOGGER.info("Dashboard: %s", url)
     LOGGER.info("Log file: %s", cfg.LOG_FILE)
-    print("\nDashboard: %s" % url)
+    print(f"\nDashboard: {url}")
     print("Press Ctrl+C to stop.\n")
 
     browser_failed = threading.Event()
     browser_timer = None
-    if args.open or browser_opener is not None:
+    if args.open:
         def open_dashboard():
             try:
-                (browser_opener or webbrowser.open)(url)
-            except OSError as exc:
-                LOGGER.error("Cannot open dashboard window: %s", exc)
+                webbrowser.open(url)
+            except OSError as e:
+                LOGGER.error("Cannot open dashboard window: %s", e)
                 browser_failed.set()
                 httpd.shutdown()
         browser_timer = threading.Timer(0.8, open_dashboard)
@@ -204,4 +115,4 @@ def demo_main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

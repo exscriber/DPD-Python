@@ -90,8 +90,7 @@ def module_label(value) -> str:
     class_match = re.search(r"([A-Za-z0-9_]+Module)", raw)
     if class_match:
         raw = class_match.group(1)
-    if raw.endswith("Module"):
-        raw = raw[:-6]
+    raw = raw.removesuffix("Module")
     labels = {
         "VariableVideo": "Video",
         "VariableVideoTransition": "Video",
